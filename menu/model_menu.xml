@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <menuitem id="menu_model_root" name="Models"
+            sequence="25"
+            web_icon="test,static/description/icon.png" />
+
+        <menuitem id="menu_model" name="Models"
+            parent="menu_model_root" sequence="20"
+            action="base.action_model_model" />
+
+    </data>
+</odoo>
