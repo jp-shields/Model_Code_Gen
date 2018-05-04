@@ -15,8 +15,9 @@
     ],
     'installable': True,
     'application': True,
-    'license': 'OPL-1',
+    'license': 'LGPL-3',
     'images': [
         'static/description/icon.png',
-    ]
+    ],
+    'website':'https://github.com/jp-shields/Model_Code_Gen'
 }
