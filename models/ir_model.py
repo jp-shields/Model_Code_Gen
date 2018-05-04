@@ -4,87 +4,81 @@ from odoo.http import request
 class IrModel(models.Model):
     _inherit = 'ir.model'
 
-    def _addParam(self,xparams):
-        xstr = ""
-        if xparams["required"]:
-            xstr += ",required=True"
-        if xparams["searchable"]:
-            xstr += ",searchable=True"
-        if xparams["manual"]:
-            xstr += ",manual=True"
-        if xparams["company_dependent"]:
-            xstr += ",company_dependent=True"
-        if not xparams["store"]:
-            xstr += ",store=False"
-        if "ondelete" in xparams:
-            xstr += ",ondelete=\"" + xparams["ondelete"] + "\""
-        if "domain" in xparams and xparams["domain"] != []:
-            xstr += ",\n\t\tdomain=" + str(xparams["domain"])
-        if "context" in xparams and xparams["context"] != {}:
-            xstr += ",\n\t\tcontext=" + str(xparams["context"])
-        if "help" in xparams:
-            xstr += ",\n\t\thelp=\"" + xparams["help"].replace("\n","\\n").replace("\"","\\""") + "\""
-        return xstr
 
-    def repr(self, obj):
-        xstr = "class " + obj._name.replace(".","_") + "(models.Model):\n" +\
-            "\t_name = '" + obj._name + "'\n" +\
-            "\t_description = '" + obj._description + "'\n" +\
-            "\t_inherit = " + str(obj._inherit) + "\n" +\
-            "\t_inherits = " + str(obj._inherits) + "\n" +\
-            "\t_order = '" + str(obj._order) + "'\n\n"
+    def repr(self, obj,rec):
+        def addParam(xf):
+            xstr = ""
+            if xf.required:
+                xstr += ",required=True"
+            if not xf.store:
+                xstr += ",store=False"
+            if xf.compute:
+                xstr += ",compute='_compute_" + xf.name + "'"
+            if xf.on_delete:
+                xstr += ",ondelete=\"" + str(xf.on_delete) + "\""
+            if xf.domain:
+                xstr += ",\n\t\tdomain=" + str(xf.domain)
+            if "context" in xf and xf["context"] != {}:
+                xstr += ",\n\t\tcontext=" + str(xf["context"])
+            if xf.help:
+                xstr += ",\n\t\thelp=\"" + xf.help.replace("\n", "\\n").replace("\"", "\\""") + "\""
+            return xstr
 
-        xfields = obj.fields_get()
-        xupfields = ('create_date','create_uid','write_uid','write_date')
+        xupfields = ('create_date', 'create_uid', 'write_uid', 'write_date')
         xmailfields = self.env['mail.thread'].fields_get()
-        for xf,xv in xfields.items():
-            if xf in xupfields and obj._name != "base":
+        xstr = "class " + rec.model.replace(".", "_") + "(models.Model):\n" + \
+               "\t_name = '" + rec.model + "'\n" + \
+               "\t_description = '" + rec.name + "'\n" + \
+               "\t_inherit = " + str(obj._inherit) + "\n" + \
+               "\t_inherits = " + str(obj._inherits) + "\n" + \
+               "\t_order = '" + str(obj._order) + "'\n\n"
+        for xf in rec.field_id:
+            if xf.name in xupfields and rec.model != "base":
                 continue
-            if xf in xmailfields and obj._name != "mail.thread" and obj._name != "base":
+            if xf.name in xmailfields and rec.model != "mail.thread" and rec.model != "base":
                 continue
-            if xv["type"] == "char":
-                xstr += "\t" + xf + " = fields.Char(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "text":
-                xstr += "\t" + xf + " = fields.Text(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "html":
-                xstr += "\t" + xf + " = fields.Html(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "date":
-                xstr += "\t" + xf + " = fields.Date(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "datetime":
-                xstr += "\t" + xf + " = fields.DateTime(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "boolean":
-                xstr += "\t" + xf + " = fields.Boolean(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "integer":
-                xstr += "\t" + xf + " = fields.Integer(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "float":
-                xstr += "\t" + xf + " = fields.Float(\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "selection":
-                xstr += "\t" + xf + " = fields.Selection(" + str(xv["selection"]) + "\n\t\t,string=\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "many2one":
-                xstr += "\t" + xf + " = fields.Many2one(\"" + xv["relation"] + "\",string=\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "one2many":
-                xstr += "\t" + xf + " = fields.One2many(\"" + xv["relation"]
-                if "relation_field" in xv:
-                    xstr += "\",\"" + xv["relation_field"]
-                xstr += "\",string=\"" + xv["string"] + "\""+ self._addParam(xv) + ")\n"
-            elif xv["type"] == "many2many":
-                iField = self.env['ir.model.fields'].search([("name","=",xf),("model_id","=",obj._name)])
-                xstr += "\t" + xf + " = fields.Many2many(\"" + xv["relation"] + "\",\"" + \
-                    str(iField[0].relation_table) + "\",\"" + \
-                        str(iField[0].column1) + "\",\"" + \
-                        str(iField[0].column2) + "\"\n\t\t" + self._addParam(xv) + ")\n"
+            if xf.compute:
+                xstr += "\tdef _compute_" + xf.name + "(self):\n\t\t" + \
+                        str(xf.compute).replace("\n", "\n\t\t") + "\n"
+            if xf.ttype == "char":
+                xstr += "\t" + xf.name + " = fields.Char(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "text":
+                xstr += "\t" + xf.name + " = fields.Text(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "html":
+                xstr += "\t" + xf.name + " = fields.Html(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "date":
+                xstr += "\t" + xf.name + " = fields.Date(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "datetime":
+                xstr += "\t" + xf.name + " = fields.DateTime(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "boolean":
+                xstr += "\t" + xf.name + " = fields.Boolean(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "integer":
+                xstr += "\t" + xf.name + " = fields.Integer(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "float":
+                xstr += "\t" + xf.name + " = fields.Float(\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "selection":
+                xstr += "\t" + xf.name + " = fields.Selection(" + str(
+                    xf.selection) + "\n\t\t,string=\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "many2one":
+                xstr += "\t" + xf.name + " = fields.Many2one(\"" + xf.relation + "\",string=\"" + xf.field_description + "\"" + addParam(
+                    xf) + ")\n"
+            elif xf.ttype == "one2many":
+                xstr += "\t" + xf.name + " = fields.One2many(\"" + xf.relation
+                if xf.relation_field:
+                    xstr += "\",\"" + xf.relation_field
+                xstr += "\",string=\"" + xf.field_description + "\"" + addParam(xf) + ")\n"
+            elif xf.ttype == "many2many":
+                xstr += "\t" + xf.name + " = fields.Many2many(\"" + xf.relation + "\",\"" + \
+                        str(xf.relation_table) + "\",\"" + \
+                        str(xf.column1) + "\",\"" + \
+                        str(xf.column2) + "\"\n\t\t" + addParam(xf) + ")\n"
             else:
-                xstr += "\t # type '" + xv["type"] + "' not supported in field '" + xf +"'\n"
-                if request.debug:
-                    xstr += "\t #  " + str(xv) + "\n\n"
-                continue
-            if request.debug:
-                xstr += "\t #  " + xf + ": " + str(xv) + "\n"
+                xstr += "\t # type '" + xf.ttype + "' not supported in field '" + xf.name + "'\n"
             xstr += "\n"
         for xc in dir(obj):
             if xc.startswith("_"):
                 continue
-            if xc in xfields:
+            if xc in obj.fields_get():
                 continue
             if xc in dir(self.env['mail.thread']):
                 continue
@@ -95,7 +89,7 @@ class IrModel(models.Model):
     @api.depends('name')
     def _get_repr(self):
         for rec in self:
-            rec['x_repr'] = self.repr(self.env[rec.model])
+            rec['x_repr'] = self.repr(self.env[rec.model],rec)
                 #self.repr(self.env[rec.name])
 
     x_repr = fields.Char('repr',compute='_get_repr',store=False,
